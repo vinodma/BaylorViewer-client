@@ -1,16 +1,39 @@
 library(plyr)
 library(igraph)
 
+getmax<-function(t){
+  
+  return(names(t)[which.max(t)])
+}
+
+len=function(x) {
+  z <- unlist(x)
+  getmap<-function(y){
+    vl<-unlist(y)
+    #print(y)
+    return(mp[[vl]])
+  }
+  return(lapply(z, getmap))
+  
+}
+
+
+
 
 build_initial_graph <-function (conf){
   # Uses igraph to parse the initial, full graph
   vert_atr<-TRUE
   file <- conf$FilePath
-  ent1<-conf$Entity1
-  typ1<-conf$type1
-  ent2 <- conf$Entity2
-  typ2 <- conf$type2
-  if(is.null(conf$type1))
+  ent1<-conf$Entity1_Col
+  typ1<-conf$Type1_Col
+  ent2 <- conf$Entity2_Col
+  typ2 <- conf$Type2_Col
+  typ1_types <- conf$Type1_types
+  typ2_types <- conf$Type2_types
+  
+  #print(typ1_types)
+  #print(typ2_types)
+  if(is.null(conf$Type1_Col))
   {
     vert_atr<-FALSE
     typ1<- "type1"
@@ -20,17 +43,37 @@ build_initial_graph <-function (conf){
   }
   
   
-  table <- read.csv(file, header = TRUE, sep = ",")
+  table <- read.csv(file, header = TRUE, sep = ",",stringsAsFactors = F)
   
  
 
   #print(typ1)
-
+  lookup <- typ1_types[[1]]
+  
   edges <- table[c(ent1, ent2)]
   data1 <- table[c(ent1, typ1)]
+  
+  
+  for(ii in lookup$name){
+  indxdata1 <- which(data1[,typ1]==ii)
+  data1[indxdata1,"color"] <- lookup[which(lookup$name== ii),]$color
+  
+  }
+  
+  
+  lookup <- typ2_types[[1]]
+  
   data2 <- table[c(ent2, typ2)]
-  colnames(data1) <- c('entity', 'type')
-  colnames(data2) <- c('entity', 'type')
+  for(ii in lookup$name){
+    indxdata2 <- which(data2[,typ2]==ii)
+    data2[indxdata2,"color"] <- lookup[which(lookup$name== ii),]$color
+    
+  }
+  
+  
+   
+  colnames(data1) <- c('entity', 'type','color')
+  colnames(data2) <- c('entity', 'type','color')
   vertex_data <- unique(rbind(data1, data2))
   #print(vertex_data)
   if(vert_atr==TRUE){
@@ -75,6 +118,7 @@ get_communities <- function(graph,alg="lv"){
 
 get_community_graph <- function(graph, communities){
   # Builds a graph of the communities
+  #print(length(communities$membership))
   V(graph)$comm <-communities$membership
   contracted <- contract.vertices(graph, communities$membership, "random")
   community_graph <- simplify(contracted, "random")
@@ -84,7 +128,13 @@ get_community_graph <- function(graph, communities){
   counts <- count(communities$membership)
   V(community_graph)$size <- counts$freq
   
+  labellist <- lapply(communities(communities),len)
+  rawlabels <- lapply(labellist,unlist)
+  labelfreq <- lapply(rawlabels,table)
+  maxlabel <- lapply(labelfreq,getmax)
   
+  
+  V(community_graph)$LabelInfo <- maxlabel
   return(community_graph)
 }
 

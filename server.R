@@ -7,9 +7,9 @@ library(jsonlite)
 
 source("external/graph_utils.R", local = TRUE)
 source("external/makenetjson.R", local = TRUE)
-
+source("external/protein_label_dictionary.R",local = TRUE)
 conf <- fromJSON("./www/data/config.json")
-
+mp <- getproteinlabeldict()
 #head(initial_data)
 graph <- build_initial_graph(conf)
 communities <- get_communities(graph)
@@ -27,7 +27,7 @@ function(input, output, session){
   # reset button
   observeEvent(input$reset_button, {
     graph <- build_initial_graph(conf)
-    print(input$select)
+    #print(input$select)
     communities <- get_communities(graph,input$select)
     global$viz_stack <- rstack()
     global$viz_stack <- insert_top(global$viz_stack, list(graph, communities))
@@ -35,21 +35,30 @@ function(input, output, session){
   })
   
   observeEvent(input$variable, {
-    print(input$variable)
+    #print(input$variable)
   })
   
   #Search button
   observeEvent(input$search_button,{
-    searchelm <- input$searchentitiy
+    searchelm <- strsplit(input$searchentitiy,",")
+    #print(searchelm)
     data <- peek_top(global$viz_stack)
     graph <- data[[1]]
     communities <- data[[2]]
+    memcomm <- NULL
     if (global$is_comm_graph){
-      memcommunity <- communities$membership[which(searchelm== V(graph)$name)]
+      ii<-1
+      for(elm in unlist(searchelm)){
+        
+        memcomm[ii] <-  communities$membership[which(elm== V(graph)$name)]
+        ii<-ii+1
+      }
+      memcommunity<-paste(memcomm,collapse = ",")
     } else {
-      memcommunity <- searchelm
-      print(memcommunity)
+      memcommunity <- input$searchentitiy
+      
     }
+   
     observe({
       session$sendCustomMessage(type = "commmemmsg" ,
                                 message = list(id=memcommunity))
@@ -60,7 +69,7 @@ function(input, output, session){
   observe({
     row <- input$degree_table_rows_selected
     if (length(row)){
-      print(row)
+      #print(row)
       session$sendCustomMessage(type = "commmemmsg" ,
                                 message = list(id=tail(row, n=1)))
     }
@@ -85,7 +94,33 @@ function(input, output, session){
       graph <- subgraph_of_one_community(graph, communities, input$comm_id) 
       communities <- get_communities(graph,input$select)
       global$viz_stack <- insert_top(global$viz_stack, list(graph, communities))
-      global$name <- insert_top(global$name, input$comm_id)      
+      global$name <- insert_top(global$name, input$comm_id)
+      
+      if(input$searchentitiy =="")
+        return()
+      
+      searchelm=input$searchentitiy
+      
+      if (global$is_comm_graph){
+        ii<-1
+        for(elm in unlist(searchelm)){
+          if(length(which(elm== V(graph)$name)) != 0){
+          memcomm[ii] <-  communities$membership[which(elm== V(graph)$name)]
+          ii<-ii+1
+          }
+        }
+        memcommunity<-paste(memcomm,collapse = ",")
+      } else {
+        memcommunity <- input$searchentitiy
+        
+      }
+      observe({
+        session$sendCustomMessage(type = "commmemmsg" ,
+                                  message = list(id=memcommunity))
+      })
+      
+      
+      
     }
   })
   
@@ -96,8 +131,9 @@ function(input, output, session){
     communities <- data[[2]]
     
     # Try and apply community detection if there are a lot of nodes to visualize
-    print(vcount(graph))
-    if (vcount(graph) > 400){
+    #print(vcount(graph))
+    #print(conf$community_threshold)
+    if (vcount(graph) >  as.numeric(conf$community_threshold)){
       community_graph <- get_community_graph(graph, communities)
       if (vcount(community_graph) > 1){ 
         global$is_comm_graph <- TRUE
@@ -112,14 +148,16 @@ function(input, output, session){
     # Remove nodes we aren't we don't want that type of node    
     dellist <- c()
     indx <- 1
-#    for (nd in V(graph)){
-#      atr <- get.vertex.attribute(graph, "type", nd)
-#      if (!(atr %in% input$node_types)){
-#        dellist[indx] <- nd
-#        indx <- indx+1
-#      }
-#    }
-#    graph <- delete.vertices(graph,dellist)
+    print(input$interactions)
+    for(nd in V(graph)){
+      atr <- get.vertex.attribute(graph,"type",nd)
+      if(grepl(atr,input$interactions) == FALSE){
+        dellist[indx] <- nd
+        indx <- indx+1
+      }
+      
+    }
+    graph <- delete.vertices(graph,dellist)
     
     return(list(graph, FALSE))
   })
@@ -127,7 +165,7 @@ function(input, output, session){
   # render with sigma the current graph (in json)
   output$graph_with_sigma <- renderUI({
     data <- graph_to_write()
-    makenetjson(data[[1]], "./www/data/current_graph.json", data[[2]]) 
+    makenetjson(data[[1]], "./www/data/current_graph.json", data[[2]],conf) 
     update_stats(data[[1]], data[[2]])
     
     observe({
@@ -143,9 +181,9 @@ function(input, output, session){
     nodes$degree <- degree(graph)
     nodes$pagerank <- page_rank(graph)$vector
     if (is_comm_graph==TRUE){
-      colnames(nodes) <- c("Name", "Type", "Comm", "Size", "Degree", "PageRank")
+      colnames(nodes) <- c("Name", "Type", "Comm", "Size", "Degree", "LabelInfo","PageRank")
     } else {
-      colnames(nodes) <- c("Name", "Type", "Comm", "Degree", "PageRank")
+      colnames(nodes) <- c("Name", "Type", "Comm", "Degree", "LabelInfo","PageRank")
     }
     global$nodes <- nodes
   }
@@ -167,7 +205,7 @@ function(input, output, session){
   # Generate a table of node degrees
   output$degree_table <- DT::renderDataTable({
     if (!is.null(global$nodes)){
-      table <- global$nodes[c("Name", "Degree", "PageRank")]
+      table <- global$nodes[c("Name", "Degree", "LabelInfo","PageRank")]
     }
   },
   options = list(order = list(list(1, 'desc'))),

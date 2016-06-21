@@ -1,5 +1,5 @@
 (function() {
-	
+	var searchelm = "";
     sigma.parsers.json("data/current_graph.json",
 
         {
@@ -16,33 +16,15 @@
 						
                         JSON.parse(JSON.stringify(message), function(k, v) {
                             if (k == "id") {
+								elems = v.split(",")
                                 s.graph.nodes().forEach(function(node, i, a) {
-									
-                                    if (node.id == v) {
+									for (var ix = 0; ix < elems.length; ix++) {
+										elem = elems[ix];
+                                    if (node.id == elem) {
                                         node.color = "#FFD700";
-                                    } else {
-                                        switch (node.type) {
-                                            case "Chemical":
-                                                node.color = "#FF8800";
-                                                break;
-
-                                            case "Disease":
-                                                node.color = "#CC0000";
-                                                break;
-
-                                            case "Protein":
-                                                node.color = "#77B300";
-                                                break;
-
-                                            case "Community":
-                                                node.color = "#2A9FD6";
-                                                break;
-
-                                            default:
-												node.color = "#FF8800";
-                                                break;
-                                        }
-                                    }
+                                    } 
+								}
+								searchelm=elems;
                                 });
                                 s.refresh();
                             }
@@ -74,30 +56,15 @@
                             container: 'graph2'
                         },
                         function(new_s) {
-                            //s.graph.kill();
                             new_s.graph.nodes().forEach(function(node, i, a) {
-
-                                switch (node.type) {
-                                    case "Chemical":
-                                        node.color = "#FF8800";
-                                        break;
-
-                                    case "Disease":
-                                        node.color = "#CC0000";
-                                        break;
-
-                                    case "Protein":
-                                        node.color = "#77B300";
-                                        break;
-
-                                    case "Community":
-                                        node.color = "#2A9FD6";
-                                        break;
-
-                                    default:
-										node.color = "#FF8800";
-                                        break;
+								
+								if(searchelm!=""){
+								for (var ix = 0; ix < searchelm.length; ix++) {
+									elem = searchelm[ix];
+									if (node.id == elem) 
+                                    	node.color = "#FFD700";
                                 }
+							}
                             });
 
                             //Call refresh to render the new graph

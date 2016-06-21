@@ -1,6 +1,6 @@
 library(jsonlite)
 
-makenetjson<-function(gcomm, filename, comm_graph){
+makenetjson<-function(gcomm, filename, comm_graph,conf){
   gcomm=simplify(gcomm, edge.attr.comb=list("sum"), remove.loops=FALSE)
   
   # We need the following attributes for sigma
@@ -20,6 +20,7 @@ makenetjson<-function(gcomm, filename, comm_graph){
   if (comm_graph){
     nodedf$label = as.character(nodedf$comm)
     nodedf$type = rep("Community", times = vcount(gcomm))
+    nodedf$color =  rep(conf$community_color, times = vcount(gcomm))
   } else {
     nodedf$label= nodedf$name
   }
