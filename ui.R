@@ -1,7 +1,7 @@
 ## ui.R ##
 library(DT)
 library(shiny)
-library(plotly)
+#library(plotly)
 library(shinydashboard)
 
 
@@ -58,8 +58,9 @@ body <- dashboardBody(
             id = "details",
             selected = "Entities",
             tabPanel("Entities", DT::dataTableOutput("degree_table")),
-            tabPanel("Degrees", plotlyOutput("degree_distribution")),
-            tabPanel("PageRanks", plotlyOutput("pagerank_distribution"))
+            #tabPanel("Degrees", plotlyOutput("degree_distribution")),
+            #tabPanel("PageRanks", plotlyOutput("pagerank_distribution")),
+            tabPanel("Disease Pathway Info.", plotOutput("pathway_distribution"))
     )
   )
   

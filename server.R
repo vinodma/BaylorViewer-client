@@ -17,6 +17,8 @@ htmlloaded = FALSE
 s1 <- rstack()
 s2 <-rstack()
 
+
+
 function(input, output, session){ 
   global <- reactiveValues()
   global$is_comm_graph = TRUE
@@ -49,7 +51,7 @@ function(input, output, session){
     if (global$is_comm_graph){
       ii<-1
       for(elm in unlist(searchelm)){
-        
+        print(elm)
         memcomm[ii] <-  communities$membership[which(elm== V(graph)$name)]
         ii<-ii+1
       }
@@ -87,41 +89,35 @@ function(input, output, session){
   
   # on-click from sigma.js
   observeEvent(input$comm_id, {
-    if (global$is_comm_graph){
-      data <- peek_top(global$viz_stack)
-      graph <- data[[1]]
-      communities <- data[[2]]
-      graph <- subgraph_of_one_community(graph, communities, input$comm_id) 
-      communities <- get_communities(graph,input$select)
-      global$viz_stack <- insert_top(global$viz_stack, list(graph, communities))
-      global$name <- insert_top(global$name, input$comm_id)
-      
-      if(input$searchentitiy =="")
-        return()
-      
-      searchelm=input$searchentitiy
-      
-      if (global$is_comm_graph){
-        ii<-1
-        for(elm in unlist(searchelm)){
-          if(length(which(elm== V(graph)$name)) != 0){
-          memcomm[ii] <-  communities$membership[which(elm== V(graph)$name)]
-          ii<-ii+1
-          }
-        }
-        memcommunity<-paste(memcomm,collapse = ",")
-      } else {
-        memcommunity <- input$searchentitiy
-        
-      }
-      observe({
-        session$sendCustomMessage(type = "commmemmsg" ,
-                                  message = list(id=memcommunity))
-      })
-      
-      
-      
-    }
+   
+	nodeval <- input$comm_id
+	matchexp <- paste0("{\"", nodeval,"\":",sep="")
+	 con <- file("./www/data/database.json")
+	 writesubsr <- NULL
+	 open(con)
+	 while (length(line <- readLines(con, n = 1, warn = FALSE)) > 0) {
+		 print(grepl(matchexp,line,fixed=TRUE))
+	 	if((grepl(matchexp,line,fixed=TRUE))==TRUE){
+			f <-"./www/data/current_graph.json"
+	 		pos = regexpr(matchexp, line,fixed=TRUE)
+			writesubsr = substr(line,attr(pos,"match.length") + 1,nchar(line) -1)
+			Sys.chmod(f, (file.info(f)$mode | "664"))
+			file.remove(f)
+			sink(file=f)
+			cat(writesubsr)
+			sink()
+	        
+			
+	 	}
+	 }
+	 close(con)
+     graph <- build_initial_graph(conf)
+     #print(input$select)
+     communities <- get_communities(graph,input$select)
+     global$viz_stack <- rstack()
+     global$viz_stack <- insert_top(global$viz_stack, list(graph, communities))
+     global$name <- insert_top(s2, "")
+    
   })
   
   # writes out the current viz graph to a json for sigma
@@ -129,7 +125,7 @@ function(input, output, session){
     data <- peek_top(global$viz_stack)    
     graph <- data[[1]]
     communities <- data[[2]]
-    
+    print(global$is_comm_graph)
     # Try and apply community detection if there are a lot of nodes to visualize
     #print(vcount(graph))
     #print(conf$community_threshold)
@@ -148,9 +144,13 @@ function(input, output, session){
     # Remove nodes we aren't we don't want that type of node    
     dellist <- c()
     indx <- 1
-    print(input$interactions)
+    if(input$interactions == "all")
+      return(list(graph, FALSE))
+    
     for(nd in V(graph)){
+      
       atr <- get.vertex.attribute(graph,"type",nd)
+      print(atr)
       if(grepl(atr,input$interactions) == FALSE){
         dellist[indx] <- nd
         indx <- indx+1
@@ -220,4 +220,27 @@ function(input, output, session){
     return(paste(c("Current Community", name)))
   })
   
+  output$pathway_distribution <- renderPlot({
+   # if(global$is_comm_graph == TRUE){
+      data <- peek_top(global$viz_stack)
+      graph <- data[[1]]
+      communities<-data[[2]]
+      labellist <- lapply(communities(communities),len)
+      rawlabels <- unlist(lapply(labellist,unlist))
+      #print(rawlabels)
+      labelfreq <- table(rawlabels)
+      #lf <- order(labelfreq)[1:10]
+      lf <- labelfreq[order(labelfreq,decreasing = T)[1:5]]
+      others_cnt <- sum(labelfreq) - sum(lf)
+      lf["OTHERS"] <-others_cnt
+      pcts <- lapply(lf,function(z){round(100.0*z/sum(lf))})
+      pcts <- paste("(",pcts,"%",")",sep="")
+      lbls <- paste(pcts,names(lf))
+      return(pie(lf,labels = lbls))
+      #print(gsize(graph))
+      
+
+    #}
+    
+  })
 }

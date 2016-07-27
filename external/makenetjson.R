@@ -19,10 +19,13 @@ makenetjson<-function(gcomm, filename, comm_graph,conf){
   nodedf$id = nodedf$name
   if (comm_graph){
     nodedf$label = as.character(nodedf$comm)
+    nodedf$comm_id= as.character(nodedf$comm)
     nodedf$type = rep("Community", times = vcount(gcomm))
     nodedf$color =  rep(conf$community_color, times = vcount(gcomm))
+    nodedf$originalcolor<-nodedf$color
   } else {
     nodedf$label= nodedf$name
+    nodedf$originalcolor<-nodedf$color
   }
   
   edgedf=get.data.frame(gcomm, what="edges");
@@ -36,7 +39,7 @@ makenetjson<-function(gcomm, filename, comm_graph,conf){
   edges_json=paste0("\"edges\":", jsonlite::toJSON(edgedf2))
   nodes_json=paste0("\"nodes\":", jsonlite::toJSON(nodedf))
   all_json=paste0("{", nodes_json, ",", edges_json, "}")
-  sink(file=filename)
-  cat(all_json)
-  sink()
+  #sink(file=filename)
+  #cat(all_json)
+  #sink()
 }

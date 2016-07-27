@@ -1,22 +1,8 @@
 library(plyr)
 library(igraph)
+library(MASS)
 
-getmax<-function(t){
-  
-  return(names(t)[which.max(t)])
-}
-
-len=function(x) {
-  z <- unlist(x)
-  getmap<-function(y){
-    vl<-unlist(y)
-    #print(y)
-    return(mp[[vl]])
-  }
-  return(lapply(z, getmap))
-  
-}
-
+source("external/protein_label_dictionary.R",local = TRUE)
 
 
 
@@ -131,9 +117,11 @@ get_community_graph <- function(graph, communities){
   labellist <- lapply(communities(communities),len)
   rawlabels <- lapply(labellist,unlist)
   labelfreq <- lapply(rawlabels,table)
+  #piechrts <- lapply(labelfreq,getpie)
+  #print(piechrts)
   maxlabel <- lapply(labelfreq,getmax)
   
-  
+  #V(community_graph)$labelfreq <- labelfreq
   V(community_graph)$LabelInfo <- maxlabel
   return(community_graph)
 }

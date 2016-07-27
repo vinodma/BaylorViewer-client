@@ -1,3 +1,29 @@
+getmax<-function(t){
+  
+  return(names(t)[which.max(t)])
+}
+
+len=function(x) {
+  z <- unlist(x)
+  getmap<-function(y){
+    vl<-unlist(y)
+    return(mp[[vl]])
+  }
+  return(lapply(z, getmap))
+  
+}
+
+getpie<- function(x){
+  if(nrow(x) ==0){
+    return(NULL)
+  }
+  else
+  {
+    return(pie(x))
+  } 
+  
+}
+
 getproteinlabeldict <- function(){ 
 con <- file("./www/data/GESA_Canonical_pathways_c2.cp.v5.0.symbols.gmt_filtered.tsv") 
 open(con);
